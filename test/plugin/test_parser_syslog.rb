@@ -199,25 +199,51 @@ class SyslogParserTest < ::Test::Unit::TestCase
   end
 
   class TestRFC5424Regexp < self
-    data('string' => 'string')
+    data('regexp' => 'regexp')
     def test_parse_with_rfc5424_message(param)
       @parser.configure(
                         'time_format' => '%Y-%m-%dT%H:%M:%S.%L%z',
-                        'message_format' => 'rfc5424',
+                        'message_format' => 'auto',
                         'with_priority' => true ,
                         'parser_type' => param
                         )
 
       # text = '<182> 1 2020-08-13T09:32:17.411033+02:00 XDSLSBC01 SBC - - - ACT 1 0 Info CAM ATTEMPT,XDSLSBC,0x0001A818001483F5,185538888,Africa-Johannesburg,08/13/2020,07:32:17.3,0,0,07:32:17.3,0,21,VoIP,IP-TO-IP,DEFAULT,,0152926575,0761386591,,0,,0,,0,0152926575,TO_PORT_REGISTRATION,1,XDSLSBC:TG_PORTA_REGISTRATIONS,172.21.1.2,172.21.1.11,TG_ACCESS_REB,,41.180.51.2:13832/41.221.227.12:18166,,172.21.1.2:30090/:0,0,,,0x0180080C,,,,2,2,"SIP,F2F1D307-DC6D11EA-A375EA1B-59EE6281@41.221.227.12,%22Switchboard%22<sip:0152926575@voip.xdsl.co.za>;tag=1A128F8-2246,<sip:0761386591@voip.xdsl.co.za>;tag=gK0c980e03,0,,,,sip:0761386591@voip.xdsl.co.za:5060,,,,sip:0152926575@41.221.227.12:5060,,,,,,401,,1,0,,0,0,,,,,,,,1,,0,0,,,,,,,,0,,,,,,,,,0,,,0,0,,,,,,,,,,,,",12,12,0,5,,,0x0a,0761386591,1,1,,2,TG_PORTA_REGISTRATIONS,"SIP,74187155_87993811@172.21.1.2,%22Switchboard%22<sip:0152926575@172.21.1.11:5060>;tag=gK0c180f65,<sip:0761386591@172.21.1.2:5060>,0,,,,sip:0761386591@172.21.1.11:5060,,,,sip:0152926575@172.21.1.2:5060,,,,,,401,,0,0,,0,0,,,,,,,,1,,0,0,,,,,,,,0,SMM_Fix_200AuthFail,,,7,1,,,,0,,,0,0,,,,0,,,,,,,,",0152926575,110,,,1,1,,,2,,,,0x046C0193,0,,,0,,,,,,0,,,,1,,,,,,,6,,,,"Switchboard",2,1,1,1,1,,1,08/13/2020,2,2,0,7,1,403,,,,41.180.51.2,41.221.227.12,42523,16,8,,,,,,,,,0,,,TANDEM,,,,,,,,13,1,,,,,,1,,,,,,,,,,,,,0,9,,,,,,,,,,,,"5,29,1,35",0,,,,,,,,,,,,,,,,,,,,",,,,,",0,0,,Z_ACCESS_REG,Z_POR'
       text = '<16> 1 2017-02-06T13:14:15.003033+00:00 192.168.0.1 fluentd - - - Hi, from Fluentd!'
+      # text = '<148>235175: 235197: Nov 18 02:59:00.355 SAST: %RADIUS-4-RADIUS_DEAD: RADIUS server 41.221.224.28:1812,1813 is not responding.'
       @parser.instance.parse(text) do |time, record|
         assert_equal(event_time("2017-02-06T13:14:15.003Z", format: '%Y-%m-%dT%H:%M:%S.%L%z'), time)
         assert_equal "-", record["pid"]
         assert_equal "-", record["msgid"]
         assert_equal "-", record["extradata"]
         assert_equal "Hi, from Fluentd!", record["message"]
+        print(record)
+        print(@parser)
       end
-      assert_equal(Fluent::Plugin::SyslogParser::RFC5424_WITHOUT_TIME_AND_PRI_REGEXP, @parser.instance.patterns['format'])
+      # assert_equal(Fluent::Plugin::SyslogParser::RFC5424_WITHOUT_TIME_AND_PRI_REGEXP, @parser.instance.patterns['format'])
+    end
+
+    data('regexp' => 'regexp')
+    def test_parse_with_rfc3164(param)
+      @parser.configure(
+          'message_format' => 'auto',
+          'with_priority' => true ,
+          'parser_type' => param
+      )
+
+      # text = '<182> 1 2020-08-13T09:32:17.411033+02:00 XDSLSBC01 SBC - - - ACT 1 0 Info CAM ATTEMPT,XDSLSBC,0x0001A818001483F5,185538888,Africa-Johannesburg,08/13/2020,07:32:17.3,0,0,07:32:17.3,0,21,VoIP,IP-TO-IP,DEFAULT,,0152926575,0761386591,,0,,0,,0,0152926575,TO_PORT_REGISTRATION,1,XDSLSBC:TG_PORTA_REGISTRATIONS,172.21.1.2,172.21.1.11,TG_ACCESS_REB,,41.180.51.2:13832/41.221.227.12:18166,,172.21.1.2:30090/:0,0,,,0x0180080C,,,,2,2,"SIP,F2F1D307-DC6D11EA-A375EA1B-59EE6281@41.221.227.12,%22Switchboard%22<sip:0152926575@voip.xdsl.co.za>;tag=1A128F8-2246,<sip:0761386591@voip.xdsl.co.za>;tag=gK0c980e03,0,,,,sip:0761386591@voip.xdsl.co.za:5060,,,,sip:0152926575@41.221.227.12:5060,,,,,,401,,1,0,,0,0,,,,,,,,1,,0,0,,,,,,,,0,,,,,,,,,0,,,0,0,,,,,,,,,,,,",12,12,0,5,,,0x0a,0761386591,1,1,,2,TG_PORTA_REGISTRATIONS,"SIP,74187155_87993811@172.21.1.2,%22Switchboard%22<sip:0152926575@172.21.1.11:5060>;tag=gK0c180f65,<sip:0761386591@172.21.1.2:5060>,0,,,,sip:0761386591@172.21.1.11:5060,,,,sip:0152926575@172.21.1.2:5060,,,,,,401,,0,0,,0,0,,,,,,,,1,,0,0,,,,,,,,0,SMM_Fix_200AuthFail,,,7,1,,,,0,,,0,0,,,,0,,,,,,,,",0152926575,110,,,1,1,,,2,,,,0x046C0193,0,,,0,,,,,,0,,,,1,,,,,,,6,,,,"Switchboard",2,1,1,1,1,,1,08/13/2020,2,2,0,7,1,403,,,,41.180.51.2,41.221.227.12,42523,16,8,,,,,,,,,0,,,TANDEM,,,,,,,,13,1,,,,,,1,,,,,,,,,,,,,0,9,,,,,,,,,,,,"5,29,1,35",0,,,,,,,,,,,,,,,,,,,,",,,,,",0,0,,Z_ACCESS_REG,Z_POR'
+      # text = '<6>Feb 28 12:00:00 192.168.0.1 fluentd[11111]: Hi, from Fluentd!'
+      text = '<148>235175: 235197: Nov 18 10:59:00.355 SAST: %RADIUS-4-RADIUS_DEAD: RADIUS server 41.221.224.28:1812,1813 is not responding.'
+      @parser.instance.parse(text) do |time, record|
+        assert_equal(event_time("2020-11-18T02:59:00.000000000Z", format: '%Y-%m-%dT%H:%M:%S.%L%z'), time)
+        assert_equal nil , record["pid"]
+        assert_equal nil, record["msgid"]
+        assert_equal nil, record["extradata"]
+        assert_equal "RADIUS server 41.221.224.28:1812,1813 is not responding.", record["message"]
+        print(record)
+        print(@parser)
+      end
+      # assert_equal(Fluent::Plugin::SyslogParser::RFC5424_WITHOUT_TIME_AND_PRI_REGEXP, @parser.instance.patterns['format'])
     end
 
     data('regexp' => 'regexp', 'string' => 'string')

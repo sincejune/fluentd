@@ -38,11 +38,12 @@ module Fluent
         \A<(?<pri>[0-9]{1,3})\>[1-9]\d{0,2} %s\z
       EOS
 
-      REGEXP_DETECT_RFC5424 = /^\<[0-9]{1,3}\>\s?[1-9]\d{0,2}/
+      REGEXP_DETECT_RFC5424 = /^\<[0-9]{1,3}\>\s?[1-9]\d{0,2} /
 
       RFC3164_WITHOUT_TIME_AND_PRI_REGEXP = /(?<host>[^ ]*) (?<ident>[^ :\[]*)(?:\[(?<pid>[0-9]+)\])?(?:[^\:]*\:)? *(?<message>.*)$/
       RFC3164_CAPTURES = RFC3164_WITHOUT_TIME_AND_PRI_REGEXP.names.freeze
       RFC3164_PRI_REGEXP = /^<(?<pri>[0-9]{1,3})>/
+      RFC3164_PRI_STEM_REGEXP = /^<(?<pri>[0-9]{1,3})>\d+: \d+: /
 
       RFC5424_WITHOUT_TIME_AND_PRI_REGEXP = /(?<host>[!-~]{1,255}) (?<ident>[!-~]{1,48}) (?<pid>[!-~]{1,128}) (?<msgid>[!-~]{1,32}) (?<extradata>(?:\-|(?:\[.*?(?<!\\)\])+))(?: (?<message>.+))?\z/m
       RFC5424_CAPTURES = RFC5424_WITHOUT_TIME_AND_PRI_REGEXP.names.freeze
@@ -110,6 +111,7 @@ module Fluent
                     class << self
                       alias_method :parse, :parse_auto
                     end
+
                     setup_time_parser_3164(@time_format)
                     setup_time_parser_5424(@rfc5424_time_format)
                     nil
@@ -168,7 +170,13 @@ module Fluent
         record = {}
 
         if @with_priority
-          if RFC3164_PRI_REGEXP.match?(text)
+          if RFC3164_PRI_STEM_REGEXP.match?(text)
+            v = text.index('>')
+            record['pri'] = text[1..v].to_i # trim `<` and ``>
+            p1 = text.index(':')
+            p2 = text.slice(p1 + 1, text.length).index(":")
+            idx = p1 + p2 + 3
+          elsif RFC3164_PRI_REGEXP.match?(text)
             v = text.index('>')
             record['pri'] = text[1..v].to_i # trim `<` and ``>
             idx = v + 1
@@ -333,7 +341,7 @@ module Fluent
         i = text.index(SPLIT_CHAR, cursor)
 
         # message part
-        msg = if i.nil?  # for 'only non-space content case'
+        msg = if i.nil? # for 'only non-space content case'
                 text.slice(cursor, text.bytesize)
               else
                 if text[i - 1] == ':'.freeze
@@ -467,7 +475,8 @@ module Fluent
                         diff = i + 1 - start # calculate ']' position
                         cursor += diff
                         text.slice(start, diff)
-                      else  # No message part case
+                      else
+                        # No message part case
                         cursor = text.bytesize
                         text.slice(start, cursor)
                       end

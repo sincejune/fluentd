@@ -28,3 +28,5 @@ cov-int/
 cov-fluentd.tar.gz
 .vscode
 .idea/
+
+fluentd-1.11.2.gem
